@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+# Añade driver según DB: aiosqlite (sqlite), pymysql (MySQL), psycopg2-binary (Postgres)
+pymysql
+python-multipart
+alembic
