@@ -6,5 +6,5 @@ pydantic
 pymysql
 python-multipart
 alembic
-gunicorn
+
 
