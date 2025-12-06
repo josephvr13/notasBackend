@@ -3,14 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 import models, schemas, crud
-from database import SessionLocal, engine, Base
-
-# Crear tablas automáticamente
-Base.metadata.create_all(bind=engine)
+from database import SessionLocal
 
 app = FastAPI(title="API de Notas con MySQL")
 
-origins = ["http://localhost:5173", "http://localhost:3000"]
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
 
 app.add_middleware(
     CORSMiddleware,
