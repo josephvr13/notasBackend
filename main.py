@@ -1,57 +1,67 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
+from database import Base, engine, get_db
+from models import Nota
+from schemas import NotaCreate, NotaResponse
 
-import models, schemas, crud
-from database import SessionLocal
+# Crear las tablas automáticamente al iniciar la app
+Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="API de Notas con MySQL")
+app = FastAPI(title="API de Notas")
 
-origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# -----------------------------
+# RUTAS CRUD
+# -----------------------------
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Crear una nota
+@app.post("/notas", response_model=NotaResponse)
+def crear_nota(nota: NotaCreate, db: Session = Depends(get_db)):
+    nueva_nota = Nota(titulo=nota.titulo, contenido=nota.contenido)
+    db.add(nueva_nota)
+    db.commit()
+    db.refresh(nueva_nota)
+    return nueva_nota
 
-@app.get("/notas", response_model=list[schemas.Nota])
-def api_obtener_notas(db: Session = Depends(get_db)):
-    return crud.obtener_notas(db)
 
-@app.get("/notas/{nota_id}", response_model=schemas.Nota)
-def api_obtener_nota(nota_id: int, db: Session = Depends(get_db)):
-    nota = crud.obtener_nota(db, nota_id)
+# Listar todas las notas
+@app.get("/notas", response_model=list[NotaResponse])
+def obtener_notas(db: Session = Depends(get_db)):
+    return db.query(Nota).all()
+
+
+# Obtener nota por ID
+@app.get("/notas/{nota_id}", response_model=NotaResponse)
+def obtener_nota(nota_id: int, db: Session = Depends(get_db)):
+    nota = db.query(Nota).filter(Nota.id == nota_id).first()
     if not nota:
         raise HTTPException(status_code=404, detail="Nota no encontrada")
     return nota
 
-@app.post("/notas", response_model=schemas.Nota, status_code=201)
-def api_crear_nota(nota: schemas.NotaCreate, db: Session = Depends(get_db)):
-    return crud.crear_nota(db, nota)
 
-@app.put("/notas/{nota_id}", response_model=schemas.Nota)
-def api_actualizar_nota(nota_id: int, datos: schemas.NotaCreate, db: Session = Depends(get_db)):
-    nota = crud.actualizar_nota(db, nota_id, datos)
+# Actualizar una nota
+@app.put("/notas/{nota_id}", response_model=NotaResponse)
+def actualizar_nota(nota_id: int, data: NotaCreate, db: Session = Depends(get_db)):
+    nota = db.query(Nota).filter(Nota.id == nota_id).first()
     if not nota:
         raise HTTPException(status_code=404, detail="Nota no encontrada")
+
+    nota.titulo = data.titulo
+    nota.contenido = data.contenido
+    db.commit()
+    db.refresh(nota)
+
     return nota
 
-@app.delete("/notas/{nota_id}", status_code=204)
-def api_eliminar_nota(nota_id: int, db: Session = Depends(get_db)):
-    ok = crud.eliminar_nota(db, nota_id)
-    if not ok:
+
+# Eliminar una nota
+@app.delete("/notas/{nota_id}")
+def eliminar_nota(nota_id: int, db: Session = Depends(get_db)):
+    nota = db.query(Nota).filter(Nota.id == nota_id).first()
+    if not nota:
         raise HTTPException(status_code=404, detail="Nota no encontrada")
-    return None
+
+    db.delete(nota)
+    db.commit()
+
+    return {"mensaje": "Nota eliminada exitosamente"}
