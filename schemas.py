@@ -1,16 +1,14 @@
 from pydantic import BaseModel
-from datetime import datetime
 
-class NotaBase(BaseModel):
+class NotaCreate(BaseModel):
     titulo: str
     contenido: str
 
-class NotaCreate(NotaBase):
-    pass
-
-class Nota(NotaBase):
+class NotaResponse(BaseModel):
     id: int
-    creado_en: datetime | None = None
+    titulo: str
+    contenido: str
+    creado_en: str
 
     class Config:
         orm_mode = True
